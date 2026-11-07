@@ -1,0 +1,62 @@
+/* Design tokens — ported from legacy/index.html. Use these variables; never hard-code colours in components. */
+:root {
+  --font: Inter, system-ui, Arial, sans-serif;
+
+  --bg: #08121e;
+  --surface: #101f2d;        /* sidebar */
+  --panel: #112332;
+  --card: #142b3b;
+  --input-bg: #091a27;
+  --list-bg: #0b1a27;
+
+  --border: #294258;
+  --border-card: #2b4657;
+  --border-input: #355166;
+  --border-list: #345366;
+  --border-row: #20394a;
+
+  --text: #e9f3fb;
+  --text-strong: #ffffff;
+  --text-nav: #c8d8e5;
+  --text-label: #bdd1df;
+  --text-muted: #9fb4c5;
+  --text-small: #9cb8c9;
+  --text-th: #9bb9c9;
+  --text-stat: #a6c0d0;
+
+  --accent: #28b98c;         /* primary buttons, checkboxes */
+  --accent-ink: #061b19;     /* text on accent */
+  --accent-text: #6de5c0;    /* stat numbers */
+  --logo: #53dfb1;
+  --good: #62e1b1;
+  --bad: #ffaaa5;
+
+  --nav-active: #1d4050;
+  --secondary: #29475b;
+  --secondary-ink: #eaf5ff;
+  --danger: #773943;
+  --tag-bg: #284c5b;
+  --tag-ink: #d1f5f0;
+  --chip-bg: #254b54;
+
+  --notice-bg: #44391e;
+  --notice-border: #9c7940;
+  --notice-ink: #ffe1a3;
+  --error-bg: #3d1f24;
+  --error-border: #8a3d47;
+  --success-bg: #12352b;
+  --success-border: #2f7a5f;
+  --tag-done-bg: #1f5a46;
+  --tag-inactive-bg: #3a3f46;
+  --tag-inactive-ink: #c9d0d6;
+  --overlay: rgba(2, 8, 14, .7);
+
+  --radius-sm: 8px;
+  --radius: 9px;
+  --radius-md: 12px;
+  --radius-lg: 15px;
+  --radius-pill: 30px;
+
+  --sidebar-w: 235px;
+  --content-max: 1500px;
+}

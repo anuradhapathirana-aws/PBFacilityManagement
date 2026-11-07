@@ -1,0 +1,93 @@
+// Keep enums in sync with shared/src/constants.js
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum StaffRole {
+  CLEANER
+  DRIVER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  ASSIGNED
+  ON_THE_WAY
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+model AdminUser {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(190)
+  passwordHash String   @db.VarChar(100)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Staff {
+  id          Int            @id @default(autoincrement())
+  name        String         @db.VarChar(100)
+  phone       String?        @db.VarChar(25)
+  role        StaffRole
+  active      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  assignments BookingStaff[]
+
+  @@index([role, active])
+}
+
+model Booking {
+  id            Int            @id @default(autoincrement())
+  code          String         @unique @db.VarChar(20)
+  customerName  String         @db.VarChar(100)
+  phone         String         @db.VarChar(25)
+  area          String         @db.VarChar(50)
+  address       String?        @db.VarChar(500)
+  service       String         @db.VarChar(60)
+  // Local business date + time (Asia/Dubai, no DST) kept as plain strings so
+  // what the admin entered is exactly what is shown and filtered on.
+  date          String         @db.Char(10)
+  time          String         @db.Char(5)
+  // Absolute start/end used for overlap checks.
+  startsAt      DateTime
+  endsAt        DateTime
+  hours         Decimal        @db.Decimal(5, 2)
+  cleanerCount  Int
+  hourlyRate    Decimal        @db.Decimal(10, 2)
+  status        BookingStatus  @default(PENDING)
+  paymentStatus PaymentStatus  @default(UNPAID)
+  notes         String?        @db.VarChar(1000)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  staff         BookingStaff[]
+
+  @@index([date])
+  @@index([startsAt, endsAt])
+}
+
+model BookingStaff {
+  bookingId Int
+  staffId   Int
+  role      StaffRole
+  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  staff     Staff     @relation(fields: [staffId], references: [id], onDelete: Restrict)
+
+  @@id([bookingId, staffId])
+  @@index([staffId])
+}

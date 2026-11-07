@@ -1,0 +1,5 @@
+* text=auto
+# Shell scripts must keep Unix line endings or they fail on the VPS
+*.sh text eol=lf
+*.png binary
+*.jpg binary
