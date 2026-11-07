@@ -12,7 +12,13 @@ export const app = express();
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
-app.use(helmet());
+app.use(
+  helmet({
+    // No `upgrade-insecure-requests`: it blanks the page when served over plain http (e.g. http://IP:8080 demo).
+    // All assets are same-origin, so on https they load over https anyway.
+    contentSecurityPolicy: { directives: { upgradeInsecureRequests: null } },
+  })
+);
 app.use(
   cors({
     origin: (origin, cb) => cb(null, !origin || env.corsOrigins.includes(origin)),
