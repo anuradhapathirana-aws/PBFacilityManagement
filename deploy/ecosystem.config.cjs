@@ -5,13 +5,13 @@ const path = require('node:path');
 module.exports = {
   apps: [
     {
-      name: 'planb',
+      name: 'planbfm',
       cwd: path.join(__dirname, '..', 'server'),
       script: 'src/server.js',
       node_args: '--env-file=.env',
       instances: 1,
       max_memory_restart: '300M',
-      time: true, // timestamps in `pm2 logs planb`
+      time: true, // timestamps in `pm2 logs planbfm`
     },
   ],
 };

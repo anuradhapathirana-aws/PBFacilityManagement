@@ -13,9 +13,20 @@ domain. Your other site is not touched.
 
 ---
 
-## Step 0 — Look before changing anything (read-only)
+## Before you start — get into the server
 
-Connect: on Windows, open PowerShell → `ssh root@YOUR_VPS_IP` (or your user instead of root).
+1. Log in to the Contabo Customer Control Panel (my.contabo.com) → **VPS / Your services**.
+   Note the server's **IP address** (four numbers, e.g. `123.45.67.89`).
+2. Find the server login: the Contabo email titled like *"Your login data"* has the user (usually `root`)
+   and password. Lost it? Ask before using the panel's password reset — the server also runs another site.
+3. On your Windows PC press **Start**, type **PowerShell**, open it, and run `ssh root@YOUR_VPS_IP`.
+   - First time it asks *"Are you sure you want to continue connecting?"* → type `yes`, Enter.
+   - Type the password — **nothing appears while typing, that's normal** — then Enter.
+   - You're in when the prompt looks like `root@vmi123456:~#`.
+   - Paste into PowerShell with **right-click**. Copy from it by selecting text and pressing Enter.
+   - Leave the server with `exit`.
+
+## Step 0 — Look before changing anything (read-only)
 
 ```bash
 $ cat /etc/os-release | head -2
@@ -45,10 +56,10 @@ ports are taken (we need **4000** free), and what is already installed.
 
 ## Step 2 — Put the code on GitHub (on your PC)
 
-1. On github.com → **New repository** → name `planb-website` → **Private** → do NOT add README → Create.
+1. On github.com → **New repository** → name `PBFacilityManagement` → **Private** → do NOT add README → Create.
 2. In the project folder on your PC (VS Code terminal):
 ```bash
-git remote add origin https://github.com/YOUR_GITHUB_USER/planb-website.git
+git remote add origin https://github.com/anuradhapathirana-aws/PBFacilityManagement.git
 git push -u origin main
 ```
 `server/.env`, `node_modules` and `dist` are in `.gitignore`, so passwords never go to GitHub.
@@ -58,21 +69,21 @@ git push -u origin main
 ## Step 3 — Let the VPS read the private repo (deploy key)
 
 ```bash
-$ ssh-keygen -t ed25519 -C "planb-vps" -f ~/.ssh/planb_deploy -N ""
-$ cat ~/.ssh/planb_deploy.pub
+$ ssh-keygen -t ed25519 -C "planbfm-vps" -f ~/.ssh/planbfm_deploy -N ""
+$ cat ~/.ssh/planbfm_deploy.pub
 ```
 Copy the printed line → GitHub repo → **Settings → Deploy keys → Add deploy key** → title `VPS`,
 paste, leave "Allow write access" **off** → Add.
 
 ```bash
 $ cat >> ~/.ssh/config <<'EOF'
-Host github-planb
+Host github-planbfm
   HostName github.com
   User git
-  IdentityFile ~/.ssh/planb_deploy
+  IdentityFile ~/.ssh/planbfm_deploy
   IdentitiesOnly yes
 EOF
-$ ssh -T github-planb        # answer "yes"; expect "...successfully authenticated..."
+$ ssh -T github-planbfm        # answer "yes"; expect "...successfully authenticated..."
 ```
 
 ---
@@ -82,15 +93,17 @@ $ ssh -T github-planb        # answer "yes"; expect "...successfully authenticat
 Skip any item Step 0 showed is already installed (Node must be **20 or newer**).
 
 ```bash
-$ sudo apt update
-# Node.js 20
-$ curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-$ sudo apt install -y nodejs
-# PM2 (keeps the app running)
-$ sudo npm install -g pm2
-# Nginx, MySQL, Certbot, git
-$ sudo apt install -y nginx mysql-server certbot python3-certbot-nginx git
+> ⚠️ **This VPS also runs a live project.** Node.js 22, Nginx and MySQL 8 are already installed and
+> used by it. **Do not reinstall, upgrade or downgrade them** (e.g. no NodeSource setup script).
+> Plan B works on the existing Node 22. Only add what is missing:
+
+```bash
+# PM2 (keeps the app running) — new, used only by Plan B's process
+$ npm install -g pm2
+# Certbot + git — only if missing (check: certbot --version ; git --version)
+$ apt install -y certbot python3-certbot-nginx git
 ```
+Do **not** run `apt upgrade` as part of this — that updates every package the live project uses.
 
 ---
 
@@ -105,9 +118,9 @@ $ openssl rand -hex 48     # → JWT_SECRET
 $ sudo mysql
 ```
 ```sql
-CREATE DATABASE cleaningos CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'planb_app'@'localhost' IDENTIFIED BY 'DB_PASSWORD';
-GRANT ALL PRIVILEGES ON cleaningos.* TO 'planb_app'@'localhost';
+CREATE DATABASE planbfm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'planbfm_app'@'localhost' IDENTIFIED BY 'DB_PASSWORD';
+GRANT ALL PRIVILEGES ON planbfm.* TO 'planbfm_app'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
@@ -117,9 +130,9 @@ EXIT;
 ## Step 6 — Download the code and configure it
 
 ```bash
-$ sudo mkdir -p /var/www/planb && sudo chown $USER:$USER /var/www/planb
-$ git clone github-planb:YOUR_GITHUB_USER/planb-website.git /var/www/planb
-$ cd /var/www/planb
+$ sudo mkdir -p /var/www/planbfm && sudo chown $USER:$USER /var/www/planbfm
+$ git clone github-planbfm:anuradhapathirana-aws/PBFacilityManagement.git /var/www/planbfm
+$ cd /var/www/planbfm
 $ cp server/.env.example server/.env
 $ nano server/.env
 ```
@@ -128,7 +141,7 @@ Replace the whole file with (fill in your values; `Ctrl+O` Enter to save, `Ctrl+
 NODE_ENV="production"
 HOST="127.0.0.1"
 PORT=4000
-DATABASE_URL="mysql://planb_app:DB_PASSWORD@localhost:3306/cleaningos"
+DATABASE_URL="mysql://planbfm_app:DB_PASSWORD@localhost:3306/planbfm"
 CLIENT_ORIGIN="https://planbfacilitymanagement.com,https://www.planbfacilitymanagement.com"
 JWT_SECRET="JWT_SECRET"
 JWT_EXPIRES_IN="8h"
@@ -157,19 +170,29 @@ $ pm2 save
 $ pm2 startup              # prints ONE command starting with "sudo env PATH=..." → copy & run it
 $ curl -I http://127.0.0.1:4000/        # expect: HTTP/1.1 200 OK
 ```
-If not 200: `pm2 logs planb --lines 50`.
+If not 200: `pm2 logs planbfm --lines 50`.
 
 ---
 
-## Step 8 — Connect the domain in Nginx
+## Step 7b — Private test before the domain exists (optional, zero impact)
+
+On your **PC** (new PowerShell window), open a secure tunnel to the app:
+```
+ssh -N -L 4000:127.0.0.1:4000 root@YOUR_VPS_IP
+```
+Enter the server password; the window then looks frozen — that's the tunnel running. Keep it open and visit
+`http://localhost:4000` (website) and `http://localhost:4000/admin` (admin) in your browser.
+Close the window (or `Ctrl+C`) to stop. Nothing on the server changes; only you can see it.
+
+## Step 8 — Connect the domain in Nginx  *(after the domain is bought and Step 1 is done)*
 
 ```bash
-$ sudo cp deploy/nginx-planb.conf /etc/nginx/sites-available/planb
-$ sudo ln -s /etc/nginx/sites-available/planb /etc/nginx/sites-enabled/planb
+$ sudo cp deploy/nginx-planbfm.conf /etc/nginx/sites-available/planbfacilitymanagement.com
+$ sudo ln -s /etc/nginx/sites-available/planbfacilitymanagement.com /etc/nginx/sites-enabled/planbfacilitymanagement.com
 $ sudo nginx -t            # MUST say "syntax is ok" + "test is successful"
 $ sudo systemctl reload nginx
 ```
-If `nginx -t` fails, **do not reload**. Remove the link (`sudo rm /etc/nginx/sites-enabled/planb`)
+If `nginx -t` fails, **do not reload**. Remove the link (`sudo rm /etc/nginx/sites-enabled/planbfacilitymanagement.com`)
 and ask for help. Your other site keeps running.
 
 Open `http://planbfacilitymanagement.com` → you should see the site (no padlock yet).
@@ -196,6 +219,8 @@ $ sudo ufw enable
 ```
 If ufw is already active, just run `sudo ufw allow 'Nginx Full'`.
 
+**This VPS (checked 2026-11-08):** ufw is already active and allows OpenSSH, 80 and 443 → **skip this step**.
+
 ---
 
 ## Step 11 — Check
@@ -210,7 +235,7 @@ If ufw is already active, just run `sudo ufw allow 'Nginx Full'`.
 
 On your PC: commit and `git push`. Then on the VPS:
 ```bash
-$ bash /var/www/planb/deploy/deploy.sh
+$ bash /var/www/planbfm/deploy/deploy.sh
 ```
 
 ## Daily database backup (recommended)
@@ -221,7 +246,7 @@ $ crontab -e
 ```
 Add this line (backs up at 2 AM, keeps 14 days). Replace DB_PASSWORD:
 ```
-0 2 * * * mysqldump -u planb_app -pDB_PASSWORD --no-tablespaces cleaningos | gzip > ~/backups/cleaningos-$(date +\%F).sql.gz && find ~/backups -name '*.sql.gz' -mtime +14 -delete
+0 2 * * * mysqldump -u planbfm_app -pDB_PASSWORD --no-tablespaces planbfm | gzip > ~/backups/planbfm-$(date +\%F).sql.gz && find ~/backups -name '*.sql.gz' -mtime +14 -delete
 ```
 Copy backups off the server now and then (e.g. WinSCP), in case the VPS itself fails.
 
@@ -229,7 +254,7 @@ Copy backups off the server now and then (e.g. WinSCP), in case the VPS itself f
 
 | What | Command |
 |---|---|
-| App status / restart | `pm2 status` · `pm2 restart planb` |
-| App logs | `pm2 logs planb --lines 100` |
+| App status / restart | `pm2 status` · `pm2 restart planbfm` |
+| App logs | `pm2 logs planbfm --lines 100` |
 | Nginx errors | `sudo tail -n 50 /var/log/nginx/error.log` |
 | Test Nginx config | `sudo nginx -t` |
